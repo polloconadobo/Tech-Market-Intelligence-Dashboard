@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Tech Market Landscape — Emmanuel Martinez</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--panel:#161b27;--card:#1c2333;--border:#2d3748;
+  --green:#10e8a8;--gold:#f6c344;--red:#ff7070;--blue:#5ba3f5;
+  --pink:#e879a0;--teal:#5bc8c8;--purple:#c084fc;
+  --text:#f0f4ff;--body:#cdd5e8;--label:#94a3c0;--muted:#5c6a84;
+}
+html,body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;min-height:100vh;font-size:15px;line-height:1.6}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── HEADER ── */
+.hdr{background:linear-gradient(160deg,#0d1117,#111d2e);border-bottom:1px solid var(--border);padding:24px 28px 18px}
+.hdr-top{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:14px}
+h1{font-family:'Bebas Neue',sans-serif;font-size:38px;letter-spacing:3px;color:var(--green);line-height:1}
+.hdr-sub{font-size:14px;color:var(--body);margin-top:7px;line-height:1.6}
+.hdr-leg{font-size:12px;color:var(--label);margin-top:4px}
+.hdr-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:4px}
+
+/* STATUS */
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);display:inline-block;animation:pulse 2s infinite}
+.live-status{display:none;align-items:center;gap:6px;font-size:13px;color:var(--green)}
+.spinner{width:14px;height:14px;border:2px solid var(--green);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;display:inline-block}
+.loading-txt{display:none;align-items:center;gap:7px;font-size:13px;color:var(--green)}
+.err-txt{display:none;font-size:12px;color:var(--red)}
+
+/* REFRESH */
+.rfbtn{background:var(--card);border:1px solid var(--border);border-radius:7px;padding:8px 16px;font-size:13px;color:var(--text);cursor:pointer;font-weight:600;font-family:inherit;transition:background .15s}
+.rfbtn:hover{background:#253050}
+.rfbtn:disabled{color:var(--muted);cursor:not-allowed}
+
+/* TABS */
+.tabs{display:flex;gap:5px;margin-top:20px;flex-wrap:wrap}
+.tbtn{background:transparent;border:1px solid var(--border);border-radius:7px;padding:8px 15px;font-size:13px;font-weight:500;color:var(--body);cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
+.tbtn.on{background:var(--green);color:#0d1117;border-color:var(--green);font-weight:700}
+.tbtn:not(.on):hover{background:#1c2333}
+
+/* CONTENT */
+.content{padding:26px 28px 40px}
+.pane{display:none}.pane.on{display:block}
+
+/* PAGE TITLE */
+.ptitle{margin-bottom:22px}
+.ptitle h2{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;color:var(--text);line-height:1}
+.ptitle p{font-size:14px;color:var(--label);margin-top:6px;line-height:1.5}
+
+/* STAT GRIDS */
+.sg4{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:20px}
+.sg3{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:20px}
+.sg2{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:20px}
+@media(max-width:880px){.sg4{grid-template-columns:1fr 1fr}.sg3{grid-template-columns:1fr 1fr}.sg2{grid-template-columns:1fr}.cg2{grid-template-columns:1fr!important}}
+
+/* STAT CARD */
+.sc{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;position:relative}
+.sc.live{border-color:var(--green)}
+.sc .pip{position:absolute;top:11px;right:12px;width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+.sc .lbl{font-size:11px;font-weight:700;color:var(--label);letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px}
+.sc .val{font-family:'Bebas Neue',sans-serif;font-size:30px;color:var(--text);letter-spacing:1px;line-height:1;margin-bottom:5px}
+.sc.live .val{color:var(--green)}
+.sc .nt{font-size:12px;color:var(--body);line-height:1.4}
+
+/* PANEL + CHART */
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:11px;padding:20px 22px;margin-bottom:14px}
+.ctitle{font-size:12px;font-weight:700;color:var(--label);letter-spacing:.8px;text-transform:uppercase;margin-bottom:14px}
+/* CRITICAL FIX: chart containers have explicit height so Chart.js sizes correctly */
+.ch{position:relative;width:100%}
+.ch-300{height:300px}
+.ch-260{height:260px}
+.ch-220{height:220px}
+.ch-420{height:420px}
+
+/* TWO-COL CHART GRID */
+.cg2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px}
+.cg2 .panel{margin-bottom:0}
+
+/* LIVE CALLOUT */
+.lc{background:#0d1a14;border:1px solid rgba(16,232,168,.3);border-left:4px solid var(--green);border-radius:10px;padding:15px 18px;margin-bottom:14px;display:none}
+.lc.show{display:block}
+.lc-lbl{font-size:11px;font-weight:700;color:var(--green);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px;display:flex;align-items:center;gap:7px}
+.lc p{font-size:14px;color:#b8f0d8;line-height:1.8}
+
+/* ADVISOR BOX */
+.advisor{border-radius:11px;margin-top:16px;overflow:hidden}
+.advisor-bar{background:linear-gradient(90deg,var(--green),#00c896);padding:10px 20px;display:flex;align-items:center;gap:10px}
+.advisor-bar span{font-size:13px;font-weight:700;color:#0d1117;letter-spacing:.5px}
+.advisor-roles{display:flex;flex-wrap:wrap;gap:6px;padding:10px 20px 0;background:#0f1e16;border-left:4px solid var(--green);border-right:1px solid rgba(16,232,168,.2)}
+.role-tag{font-size:10px;font-weight:700;background:rgba(16,232,168,.12);color:var(--green);border:1px solid rgba(16,232,168,.3);border-radius:20px;padding:3px 10px;letter-spacing:.5px;text-transform:uppercase}
+.advisor-body{background:#0f1e16;border:1px solid rgba(16,232,168,.2);border-top:none;border-left:4px solid var(--green);border-radius:0 0 11px 11px;padding:16px 20px 20px}
+.advisor-section{margin-bottom:14px}
+.advisor-section:last-child{margin-bottom:0}
+.asec-role{font-size:11px;font-weight:700;color:var(--green);letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px;opacity:.8}
+.asec-text{font-size:14px;color:var(--body);line-height:1.85}
+.asec-text strong{color:var(--text)}
+.divider{border:none;border-top:1px solid rgba(255,255,255,.07);margin:14px 0}
+
+footer{text-align:center;font-size:11px;color:var(--muted);padding:6px 28px 20px}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-top">
+    <div>
+      <h1>Tech Market Landscape</h1>
+      <p class="hdr-sub">1950s → March 2026 &nbsp;·&nbsp; Live Market Intelligence for <strong style="color:var(--text)">Emmanuel Martinez</strong></p>
+      <p class="hdr-leg"><span style="color:var(--gold)">★</span> Your home markets &nbsp;·&nbsp; <span style="color:var(--green)">●</span> Live-updated figures</p>
+    </div>
+    <div class="hdr-right">
+      <span class="loading-txt" id="ldTxt"><span class="spinner"></span>Fetching live data…</span>
+      <span class="live-status" id="lvStat"><span class="live-dot"></span><span id="lvTime">Live</span></span>
+      <span class="err-txt" id="errTxt"></span>
+      <button class="rfbtn" id="rfBtn" onclick="doRefresh()">⟳ Refresh Live Data</button>
+    </div>
+  </div>
+  <div class="tabs" id="tabBar"></div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- ── TAB 0: INDUSTRY GROWTH ── -->
+  <div class="pane on" id="pane-0">
+    <div class="ptitle"><h2>US Tech Sector Employment Growth</h2><p>Total tech workers in thousands · Bureau of Labor Statistics &amp; CompTIA · 1950–March 2026</p></div>
+    <div class="sg4">
+      <div class="sc live" id="sc-jobs"><span class="pip"></span><div class="lbl">Tech Workers 2026</div><div class="val">10.1M+</div><div class="nt">Active US tech employees</div></div>
+      <div class="sc live" id="sc-remote"><span class="pip"></span><div class="lbl">Remote / Hybrid</div><div class="val">~31%</div><div class="nt">Of all US tech roles today</div></div>
+      <div class="sc"><div class="lbl">PA Tech Jobs</div><div class="val">~268K</div><div class="nt">Ranked #10 nationally</div></div>
+      <div class="sc"><div class="lbl">NJ Tech Jobs</div><div class="val">~248K</div><div class="nt">NYC corridor access</div></div>
+    </div>
+    <div class="panel"><div class="ctitle">Total US Tech Workforce (Thousands) — 1950 to 2026</div><div class="ch ch-300"><canvas id="c-growth"></canvas></div></div>
+    <div class="panel"><div class="ctitle">Remote Work in Tech — % of All Roles (2010–2026)</div><div class="ch ch-220"><canvas id="c-remote"></canvas></div></div>
+    <div class="lc" id="lc-hire"><div class="lc-lbl"><span class="live-dot"></span>Live — Hiring Trends Jan–Mar 2026</div><p id="lc-hire-t"></p></div>
+    <div class="advisor">
+      <div class="advisor-bar"><span>🎯 Your Advisory Team Weighs In</span></div>
+      <div class="advisor-roles">
+        <span class="role-tag">Career Coach</span><span class="role-tag">Employment Specialist</span><span class="role-tag">Life Coach</span><span class="role-tag">Outplacement Consultant</span>
+      </div>
+      <div class="advisor-body">
+        <div class="advisor-section">
+          <div class="asec-role">Career Coach</div>
+          <div class="asec-text">The US tech workforce has grown nearly <strong>200× since 1950</strong> and — despite the 2022–2023 layoff cycle — added jobs again in both 2024 and 2025. You entered this market at the right time, and you are still in it at the right time. This is not a shrinking industry. It is one of the most resilient labor markets in the entire US economy, and your decade-plus of real enterprise experience puts you in a stronger position than most.</div>
+        </div>
+        <hr class="divider"/>
+        <div class="advisor-section">
+          <div class="asec-role">Employment Specialist / Agent</div>
+          <div class="asec-text">With <strong>31% of tech roles now permanently remote or hybrid</strong>, your location in East Stroudsburg is no longer a limiting factor. The talent market sees your zip code — but employers in San Francisco, Seattle, Austin, and Washington DC will hire you without relocation. Your job search should be national from day one. Apply to roles in all five top tech states simultaneously. Filter for "remote" or "hybrid" on every job board and set alerts for Azure, Intune, and Infrastructure Engineer positions across the country.</div>
+        </div>
+        <hr class="divider"/>
+        <div class="advisor-section">
+          <div class="asec-role">Outplacement Consultant</div>
+          <div class="asec-text">After your contract at United Health Services (Hanover Hill) wrapped in February 2026, you have a clear, positive story to tell: you were brought in specifically to support a <strong>new 144-bed hospital go-live</strong> — a defined project with a defined end. That is not a gap on your résumé. That is mission accomplished. Frame it that way in every conversation.</div>
+        </div>
+        <hr class="divider"/>
+        <div class="advisor-section">
+          <div class="asec-role">Life Coach</div>
+          <div class="asec-text">Transitions can feel disorienting, especially after an intense deployment like a hospital launch. Give yourself credit for what you just completed — it was high-stakes, high-pressure work. Use this moment not just to find the <em>next</em> job, but to be intentional about finding the <strong>right</strong> next role: one that compensates you fairly, challenges you appropriately, and ideally moves you up the salary curve toward cloud engineering. You have earned the ability to be selective.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB 1: GENDER ── -->
+  <div class="pane" id="pane-1">
+    <div class="ptitle"><h2>Gender Representation in US Tech</h2><p>% of computing &amp; IT workforce · NSF, NCWIT, BLS · 1960–2026</p></div>
+    <div class="sg3">
+      <div class="sc live" id="sc-women"><span class="pip"></span><div class="lbl">Women in Tech 2026</div><div class="val">~28%</div><div class="nt">Slow recovery since 2020</div></div>
+      <div class="sc"><div class="lbl">All-Time Peak — 1984</div><div class="val">37%</div><div class="nt">Highest representation ever recorded</div></div>
+      <div class="sc"><div class="lbl">Cloud &amp; Infra Roles</div><div class="val">~18%</div><div class="nt">Women in infrastructure specifically</div></div>
+    </div>
+    <div class="panel"><div class="ctitle">Gender Split in Tech Workforce — % of Total (1960–2026)</div><div class="ch ch-300"><canvas id="c-gender"></canvas></div></div>
+    <div class="advisor">
+      <div class="advisor-bar"><span>🎯 Your Advisory Team Weighs In</span></div>
+      <div class="advisor-roles">
+        <span class="role-tag">Industry Mentor</span><span class="role-tag">Resume Strategist</span><span class="role-tag">Employment Specialist</span><span class="role-tag">LinkedIn Strategist</span>
+      </div>
+      <div class="advisor-body">
+        <div class="advisor-section">
+          <div class="asec-role">Industry-Specific Mentor</div>
+          <div class="asec-text">Women peaked at <strong>37% of the tech workforce in 1984</strong> and have never recovered — largely because tech culture became male-dominated after the home computing boom. Infrastructure and cloud roles like yours are among the most gender-skewed in all of tech, sitting at roughly <strong>82% male</strong>. Understanding this dynamic helps you read the room in interviews: DEI-conscious hiring managers at healthcare systems and government agencies are actively trying to diversify their infrastructure teams. You represent exactly the profile they are looking for.</div>
+        </div>
+        <hr class="divider"/>
+        <div class="advisor-section">
+          <div class="asec-role">Resume Writer &amp; LinkedIn Strategist</div>
+          <div class="asec-text">On your LinkedIn profile, make your background visible — not just your technical skills. Add the <strong>"Open to Work"</strong> frame and set your preferences to Infrastructure Engineer, Cloud Engineer, and Systems Administrator. In your About section, mention your experience supporting diverse clinical and government workforces. Recruiters at companies under diversity mandates specifically search for profiles like yours. A well-positioned LinkedIn headline — something like <em>"Azure &amp; Hybrid Infrastructure Engineer | 10+ Years Enterprise IT | Healthcare · Manufacturing · Government"</em> — will dramatically increase inbound recruiter messages.</div>
+        </div>
+        <hr class="divider"/>
+        <div class="advisor-section">
+          <div class="asec-role">Employment Specialist</div>
+          <div class="asec-text">Target employers with active DEI initiatives in healthcare and government contracting. Companies like <strong>Leidos, SAIC, Booz Allen Hamilton, Cigna, Cerner/Oracle Health, and Epic Systems</strong> all have infrastructure teams and actively recruit diverse senior IT professionals. These are not entry-level roles — they want people with exactly your background, and they pay $95,000–$130,000 for it.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB 2: RACE & ORIGIN ── -->
+  <div class="pane" id="pane-2">
+    <div class="ptitle"><h2>Race, Ethnicity &amp; National Origin in US Tech</h2><p>US tech workforce composition · EEOC, EEO-1, CompTIA · 2025–2026</p></div>
+    <div class="cg2">
+      <div class="panel"><div class="ctitle">Workforce Share by Race / Ethnicity — 2026</div><div class="ch ch-260"><canvas id="c-race"></canvas></div></div>
+      <div class="panel"><div class="ctitle">Hispanic / Latino in Tech — % of Workforce (1995–2026)</div><div class="ch ch-260"><canvas id="c-hisp"></canvas></div></div>
+    </div>
+    <div class="lc" id="lc-hisp"><div class="lc-lbl"><span class="live-dot"></span>Live — Hispanic &amp; Latino in Tech</div><p id="lc-hisp-t"></p></div>
+    <div class="advisor">
+      <div class="advisor-bar"><span>🎯 Your Advisory Team Weighs In</span></div>
+      <div class="advisor-roles">
+        <span class="role-tag">Career Coach</span><span class="role-tag">LinkedIn Strategist</span><span class="role-tag">Outplacement Consultant</span><span class="role-tag">Life Coach</span>
+      </div>
+      <div class="advisor-body">
+        <div class="advisor-section">
+          <div class="asec-role">Career Coach</div>
+          <div class="asec-text">Hispanic and Latino professionals make up approximately <strong>8.5% of the US tech workforce</strong> but nearly <strong>19% of the US population</strong> — a representation gap that is most acute at the senior cloud and infrastructure level, exactly where your career is headed. This is not a disadvantage. It is a market inefficiency that works in your favor. There is genuine demand for senior Hispanic IT leaders, and you are one of very few who combine enterprise infrastructure depth with that background.</div>
+        </div>
+        <hr class="divider"/>
+        <div class="advisor-section">
+          <div class="asec-role">LinkedIn &amp; Resume Strategist</div>
+          <div class="asec-text">Join and engage with professional groups like <strong>Hispanics in Technology (HiT), HITEC (Hospitality Financial and Technology Professionals), and the Society of Hispanic Professional Engineers (SHPE)</strong>. These networks connect you with employers who have diversity hiring goals and can fast-track you past the applicant queue. On your résumé, do not hide your bilingual ability or cross-cultural experience if applicable — for government and healthcare clients, that is a genuine operational asset. Add a line to your LinkedIn About section that signals your participation in these communities.</div>
+        </div>
+        <hr class="divider"/>
+        <div class="advisor-section">
+          <div class="asec-role">Outplacement Consultant</div>
+          <div class="asec-text">Federal contractors are under <strong>OFCCP compliance requirements</strong> to demonstrate diverse hiring in technical roles. Companies like Leidos, ManTech, Perspecta, and GDIT actively recruit Hispanic infrastructure engineers for government contracts. Your Bethlehem/PA market gives you proximity to the DC corridor — a massive federal contracting hub — and your government courthouse IT experience is a direct match. This is a lane you should be pursuing aggressively right now.</div>
+        </div>
+        <hr class="divider"/>
+        <div class="advisor-section">
+          <div class="asec-role">Life Coach</div>
+          <div class="asec-text">Your identity is not a box to check on a form — it is part of what makes you effective in diverse clinical environments, multi-department operations, and community-serving institutions. You have spent your career supporting hospitals, courthouses, and manufacturing plants that serve everyday people. That is a form of purpose-driven work. As you move into your next role, consider: which organizations align with the communities and values you care about? The best career moves serve both your bank account <em>and</em> your sense of meaning.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB 3: BY STATE ── -->
+  <div class="pane" id="pane-3">
+    <div class="ptitle"><h2>Tech Employment by US State</h2><p>Thousands of tech workers by state · CompTIA State of the Tech Workforce · 2025–2026</p></div>
+    <div class="lc" id="lc-state"><div class="lc-lbl"><span class="live-dot"></span>Live — State Market Update</div><p id="lc-state-t"></p></div>
+    <div class="panel" style="margin-top:14px"><div class="ctitle">Tech Jobs by State in Thousands — Gold = Your Home Markets</div><div class="ch ch-420"><canvas id="c-states"></canvas></div></div>
+    <div class="advisor">
+      <div class="advisor-bar"><span>🎯 Your Advisory Team Weighs In</span></div>
+      <div class="advisor-roles">
+        <span class="role-tag">Employment Specialist</span><span class="role-tag">Career Coach</span><span class="role-tag">Industry Mentor</span>
+      </div>
+      <div class="advisor-body">
+        <div class="advisor-section">
+          <div class="asec-role">Employment Specialist / Agent</div>
+          <div class="asec-text">Pennsylvania (#10, ~268K tech jobs) and New Jersey (#11, ~248K) are solid markets — but they are not your ceiling, they are your floor. Your proximity to NYC's <strong>600,000+ tech ecosystem</strong> means you can realistically target hybrid roles at major New York employers while living in East Stroudsburg. The commute corridor is well-established for Poconos residents. On top of that, remote work unlocks California (1.89M jobs), Texas (790K), and Washington State (660K) without you ever boarding a plane. <strong>Apply to all three simultaneously.</strong></div>
+        </div>
+        <hr class="divider"/>
+        <div class="advisor-section">
+          <div class="asec-role">Industry-Specific Mentor</div>
+          <div class="asec-text">The Lehigh Valley and Bethlehem corridor is experiencing real growth in <strong>healthcare IT, advanced manufacturing technology, and government contracting</strong>. St. Luke's Health Network, Lehigh Valley Health Network, B. Braun Medical, Air Products, and various defense contractors all operate infrastructure teams in this zone. These are stable, benefit-rich employers. Your hospital go-live experience at Hanover Hill is a direct credential for roles at other regional health systems. Do not overlook the local market while pursuing national ones — both can run in parallel.</div>
+        </div>
+        <hr class="divider"/>
+        <div class="advisor-section">
+          <div class="asec-role">Career Coach</div>
+          <div class="asec-text">Think of your job search geography in three concentric rings: <strong>Ring 1</strong> — Lehigh Valley / Poconos local market, target healthcare and manufacturing IT. <strong>Ring 2</strong> — NYC metro hybrid roles you can commute to 2–3 days per week. <strong>Ring 3</strong> — Fully remote national roles in the top-5 tech states. All three rings should be active at the same time. The more irons in the fire during a search, the shorter the search.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB 4: AGE ── -->
+  <div class="pane" id="pane-4">
+    <div class="ptitle"><h2>Age Distribution: Tech vs All Industries</h2><p>% of workforce by age group · BLS Occupational Employment Survey · 2025–2026</p></div>
+    <div class="sg3">
+      <div class="sc"><div class="lbl">Median Age in Tech</div><div class="val">38 Yrs</div><div class="nt">vs. 42 years across all industries</div></div>
+      <div class="sc"><div class="lbl">Age Bias Threshold</div><div class="val">45+</div><div class="nt">Documented hiring slowdown begins here</div></div>
+      <div class="sc" style="border-color:var(--green)"><div class="lbl">Your Bracket Now</div><div class="val" style="color:var(--green)">35–44</div><div class="nt">28% of tech workforce — prime window</div></div>
+    </div>
+    <div class="panel"><div class="ctitle">Age Distribution — Tech Industry vs All Industries (%)</div><div class="ch ch-300"><canvas id="c-age"></canvas></div></div>
+    <div class="lc" id="lc-age"><div class="lc-lbl"><span class="live-dot"></span>Live — Age &amp; Hiring Trends in Tech 2026</div><p id="lc-age-t"></p></div>
+    <div class="advisor">
+      <div class="advisor-bar"><span>🎯 Your Advisory Team Weighs In</span></div>
+      <div class="advisor-roles">
+        <span class="role-tag">Career Coach</span><span class="role-tag">Industry Mentor</span><span class="role-tag">Employment Specialist</span><span class="role-tag">Life Coach</span>
+      </div>
+      <div class="advisor-body">
+        <div class="advisor-section">
+          <div class="asec-role">Career Coach</div>
+          <div class="asec-text">You are in the <strong>35–44 bracket</strong> — the single largest experienced cohort in tech and the one hiring managers associate with "can hit the ground running." You have enough seniority to be trusted with complex infrastructure, but you are still young enough to escape the ageism that begins to affect candidates around 45. This window is real and finite. <strong>Do not wait 2–3 years to make your move into cloud engineering.</strong> The time is now, while your age reads as "peak experienced" rather than "senior risk."</div>
+        </div>
+        <hr class="divider"/>
+        <div class="advisor-section">
+          <div class="asec-role">Industry-Specific Mentor</div>
+          <div class="asec-text">In enterprise infrastructure, age actually works in your favor in one specific way: <strong>large-scale deployments require judgment that you can only get from having done them.</strong> Your 144-bed hospital launch, your VMware and Hyper-V work at Vigon across 200+ users, and your government courthouse infrastructure at the Monroe County Courthouse — these are not things a 27-year-old Azure-certified candidate can fake. Experience of that depth typically takes 10+ years to accumulate. Use it as your primary differentiator in every interview.</div>
+        </div>
+        <hr class="divider"/>
+        <div class="advisor-section">
+          <div class="asec-role">Employment Specialist</div>
+          <div class="asec-text">To protect yourself from age-based screening, apply best practices: <strong>remove graduation years</strong> from your résumé if they reveal age, list only the past 10–12 years of work history (your career from ~2014 forward is your strongest), and ensure your LinkedIn profile photo is current and professional. Avoid listing certifications or training from before 2010 unless they are still current. This is not dishonesty — it is smart positioning in a market that, unfortunately, has documented bias patterns.</div>
+        </div>
+        <hr class="divider"/>
+        <div class="advisor-section">
+          <div class="asec-role">Life Coach</div>
+          <div class="asec-text">This is the decade where the investments you make in your career compound the most. Every certification you earn now, every senior role you land now, sets your salary trajectory for the next 15–20 years. The habits, title, and income level you establish in your late 30s and early 40s become your baseline. <strong>Set the bar high.</strong> Aim for roles at $110K minimum, with a target of $130K+ in 18 months after earning AZ-104. The lifestyle you want for your family in your 40s starts with the decisions you make in your search right now.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB 5: SALARIES ── -->
+  <div class="pane" id="pane-5">
+    <div class="ptitle"><h2>Salary Trends: IT Roles vs National Median</h2><p>Annual salary in thousands USD · BLS, Glassdoor, Levels.fyi · 1990–March 2026 (live)</p></div>
+    <div class="sg4">
+      <div class="sc live" id="sc-sup"><span class="pip"></span><div class="lbl">IT Support Specialist</div><div class="val">$68K</div><div class="nt">US median, 2026</div></div>
+      <div class="sc live" id="sc-sys"><span class="pip"></span><div class="lbl">Systems Administrator</div><div class="val">$100K</div><div class="nt">US median, 2026</div></div>
+      <div class="sc live" id="sc-cld"><span class="pip"></span><div class="lbl">Cloud / Azure Engineer</div><div class="val">$142K</div><div class="nt">US median, 2026</div></div>
+      <div class="sc live" id="sc-nat"><span class="pip"></span><div class="lbl">National Median (All)</div><div class="val">$63K</div><div class="nt">All US occupations, 2026</div></div>
+    </div>
+    <div class="panel"><div class="ctitle">Salary by Role in Thousands USD / Year (1990–2026)</div><div class="ch ch-300"><canvas id="c-sal"></canvas></div></div>
+    <div class="advisor">
+      <div class="advisor-bar"><span>🎯 Your Advisory Team Weighs In</span></div>
+      <div class="advisor-roles">
+        <span class="role-tag">Career Coach</span><span class="role-tag">Resume Writer</span><span class="role-tag">Industry Mentor</span><span class="role-tag">Life Coach</span>
+      </div>
+      <div class="advisor-body">
+        <div class="advisor-section">
+          <div class="asec-role">Career Coach</div>
+          <div class="asec-text">The gap between IT Support and Cloud Engineering is now <strong>~$74,000 per year</strong> — and it widens every year. You are one certification away from crossing that threshold. The AZ-104 (Azure Administrator Associate) is not a multi-year undertaking. With your existing hands-on Azure experience, most professionals in your position pass it in <strong>6–10 weeks of focused preparation</strong>. After that, you are no longer applying to "$68K support roles" — you are applying to "$120K–$145K infrastructure engineer" roles. That single investment could be worth over $700,000 in additional lifetime earnings.</div>
+        </div>
+        <hr class="divider"/>
+        <div class="advisor-section">
+          <div class="asec-role">Resume Writer</div>
+          <div class="asec-text">Your current résumé titles yourself as "Information Technology Specialist" and "IT Infrastructure and Support Specialist." Those titles anchor you to the lower salary band. <strong>Retitle your experience to reflect what you actually did:</strong> "Azure Hybrid Infrastructure Engineer," "Cloud &amp; Endpoint Systems Administrator," or "Enterprise IT Infrastructure Lead." Employers do not read job descriptions closely — they scan titles and keywords. Your title is your salary anchor. Change it before you submit another application.</div>
+        </div>
+        <hr class="divider"/>
+        <div class="advisor-section">
+          <div class="asec-role">Industry-Specific Mentor</div>
+          <div class="asec-text">You have been doing <strong>Cloud Engineer work at IT Support pay</strong> for at least 3–4 years. At Vigon International, you administered Intune, Azure AD Connect, Conditional Access, Azure VMs, and hybrid identity — that is a $100K–$115K role at most companies. At Hanover Hill, you were the primary escalation point for Windows Server, RMM, and large-scale clinical device deployment — that is a Systems Administrator or IT Lead role worth $85K–$100K. The market owes you a correction. Go get it.</div>
+        </div>
+        <hr class="divider"/>
+        <div class="advisor-section">
+          <div class="asec-role">Life Coach</div>
+          <div class="asec-text">You deserve to be compensated for the real value you deliver. If you have been earning below $80K while running enterprise-level infrastructure for 200+ users across cloud and on-premise environments, that is not a reflection of your worth — it is a reflection of not yet having positioned yourself for the salary you've earned. <strong>Know your number before every interview.</strong> Research Glassdoor, Levels.fyi, and LinkedIn Salary for your target title and location. Walk in knowing your range is $105K–$130K and do not apologize for it.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB 6: SKILLS ── -->
+  <div class="pane" id="pane-6">
+    <div class="ptitle"><h2>Your Skills vs Current Market Demand</h2><p>LinkedIn, Indeed &amp; Glassdoor job posting analysis · March 2026</p></div>
+    <div class="lc" id="lc-skills"><div class="lc-lbl"><span class="live-dot"></span>Live — Most In-Demand IT Skills in Job Postings Right Now</div><p id="lc-skills-t"></p></div>
+    <div class="cg2" style="margin-top:14px">
+      <div class="panel"><div class="ctitle">Skill Alignment Radar — You vs Market</div><div class="ch ch-300"><canvas id="c-radar"></canvas></div></div>
+      <div class="panel"><div class="ctitle">Demand vs Your Proficiency (Score / 100)</div><div class="ch ch-300"><canvas id="c-skills"></canvas></div></div>
+    </div>
+    <div class="advisor">
+      <div class="advisor-bar"><span>🎯 Your Advisory Team Weighs In</span></div>
+      <div class="advisor-roles">
+        <span class="role-tag">Industry Mentor</span><span class="role-tag">Career Coach</span><span class="role-tag">Resume Writer</span><span class="role-tag">LinkedIn Strategist</span><span class="role-tag">Employment Specialist</span>
+      </div>
+      <div class="advisor-body">
+        <div class="advisor-section">
+          <div class="asec-role">Industry-Specific Mentor</div>
+          <div class="asec-text">You meet or exceed market demand in <strong>6 of 8 core skill areas</strong>. Your ServiceNow and Intune scores are above what most employers expect — that makes you a top-tier candidate in ITSM and modern endpoint management. The two gaps that matter are <strong>Cybersecurity</strong> (market: 94, you: ~82) and <strong>PowerShell scripting</strong> (market: 80, you: ~70). These are not huge gaps, but they are visible ones. Close them and you transform from "strong candidate" to "near-perfect candidate" for senior infrastructure roles.</div>
+        </div>
+        <hr class="divider"/>
+        <div class="advisor-section">
+          <div class="asec-role">Career Coach — Your 90-Day Action Plan</div>
+          <div class="asec-text">
+            <strong>Weeks 1–4 (Now):</strong> Update your résumé titles, refresh your LinkedIn headline, set your job alert filters for "Azure Infrastructure Engineer," "Modern Workplace Engineer," and "Cloud Systems Administrator." Apply to at least 10 positions per week — local, NYC hybrid, and national remote.<br/><br/>
+            <strong>Weeks 5–10:</strong> Begin AZ-104 prep using Microsoft Learn (free) + a practice exam service like MeasureUp or Whizlabs. Schedule the exam for Week 10. Pass rate for hands-on practitioners like you is very high.<br/><br/>
+            <strong>Weeks 11–16:</strong> With AZ-104 in hand, shift your job search filter to roles explicitly requiring Azure Administrator certification. These roles pay $105K–$145K. Begin SC-200 prep (Microsoft Security Operations Analyst) — 8–10 additional weeks.
+          </div>
+        </div>
+        <hr class="divider"/>
+        <div class="advisor-section">
+          <div class="asec-role">Resume Writer &amp; LinkedIn Strategist</div>
+          <div class="asec-text">Your résumé should open with a strong technical summary that leads with cloud, not support. Something like: <em>"Azure-certified Hybrid Infrastructure Engineer with 10+ years of enterprise IT experience across healthcare, manufacturing, and government environments. Deep expertise in Microsoft Intune, Entra ID (Azure AD), Exchange Online, and large-scale Windows infrastructure. Proven track record managing 200+ user environments, directing hospital go-lives, and reducing ticket resolution time by 30%."</em> Every bullet point that currently says "provided support" should be rewritten to lead with a <strong>business outcome</strong> — uptime percentages, ticket reductions, deployment scale, and security improvements.</div>
+        </div>
+        <hr class="divider"/>
+        <div class="advisor-section">
+          <div class="asec-role">Employment Specialist</div>
+          <div class="asec-text">Target these specific job titles in your search: <strong>Azure Infrastructure Engineer, Modern Workplace Engineer, Cloud Systems Administrator, IT Infrastructure Lead, Endpoint &amp; Identity Engineer, Microsoft 365 Administrator, Hybrid Cloud Engineer.</strong> These titles map directly to your existing skill set and command salaries of $95K–$145K. Avoid applying to roles titled "Help Desk Lead," "IT Support Manager," or "Desktop Support Engineer" — those titles anchor you to a lower salary band and do not reflect your actual capabilities.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>Sources: BLS · NCWIT · CompTIA · EEOC · NSF · LinkedIn Workforce Report · Glassdoor · Live via Claude API &nbsp;|&nbsp; Built for Emmanuel Martinez</footer>
+
+<script>
+/* ── TABS ─────────────────────────────────────────────────────────────── */
+const TABS=[
+  {icon:"📈",label:"Industry Growth"},{icon:"⚧",label:"Gender"},
+  {icon:"🌎",label:"Race & Origin"},{icon:"📍",label:"By State"},
+  {icon:"🎂",label:"Age"},{icon:"💰",label:"Salaries"},{icon:"🛠",label:"Skills Match"}
+];
+const bar=document.getElementById("tabBar");
+TABS.forEach((t,i)=>{
+  const b=document.createElement("button");
+  b.className="tbtn"+(i===0?" on":"");
+  b.textContent=t.icon+" "+t.label;
+  b.onclick=()=>{
+    document.querySelectorAll(".tbtn").forEach((x,j)=>x.classList.toggle("on",j===i));
+    document.querySelectorAll(".pane").forEach((x,j)=>x.classList.toggle("on",j===i));
+  };
+  bar.appendChild(b);
+});
+
+/* ── CHART.JS GLOBALS ─────────────────────────────────────────────────── */
+Chart.defaults.color="#94a3c0";
+Chart.defaults.borderColor="#1e2638";
+Chart.defaults.font.family="Inter,system-ui,sans-serif";
+Chart.defaults.font.size=12;
+const G="#10e8a8",GD="#f6c344",R="#ff7070",BL="#5ba3f5",PK="#e879a0",TL="#5bc8c8",MU="#5c6a84";
+
+const baseOpts=(extra={})=>Object.assign({
+  responsive:true,maintainAspectRatio:false,
+  plugins:{legend:{labels:{color:"#cdd5e8",font:{size:12},boxWidth:13,padding:12}}},
+  scales:{
+    x:{grid:{color:"#1e2638"},ticks:{color:"#94a3c0"}},
+    y:{grid:{color:"#1e2638"},ticks:{color:"#94a3c0"}}
+  }
+},extra);
+
+/* ── DATA ─────────────────────────────────────────────────────────────── */
+const gY=[1950,1960,1970,1980,1990,2000,2005,2010,2015,2020,2022,2024,2026];
+const gJ=[50,180,620,1400,2900,5500,4800,5200,6800,8400,9200,9800,10100];
+const rY=[2010,2015,2019,2020,2021,2022,2023,2024,2026];
+const rP=[9,14,18,62,58,44,38,34,31];
+const genY=[1960,1970,1980,1984,1990,2000,2010,2015,2020,2024,2026];
+const genM=[73,70,65,63,66,72,75,76,74,73,72];
+const genW=[27,30,35,37,34,28,25,24,26,27,28];
+const hY=[1995,2000,2005,2010,2015,2020,2022,2024,2026];
+const hP=[3.2,4.1,5.0,5.8,6.5,7.8,8.0,8.3,8.5];
+const stL=["California","Texas","Washington","New York","Virginia","Massachusetts","Florida","Illinois","Colorado","Pennsylvania ★","New Jersey ★","Georgia","North Carolina","Arizona","Ohio"];
+const stV=[1890,790,660,600,490,450,400,330,305,268,248,220,200,190,165];
+const stC=stL.map(l=>l.includes("★")?GD:G+"99");
+const aB=["18–24","25–34","35–44","45–54","55–64","65+"];
+const aT=[8,31,28,19,11,3],aA=[13,22,22,21,16,6];
+const sY=[1990,2000,2010,2015,2020,2024,2026];
+const sSup=[28,46,48,53,58,65,68],sSys=[35,58,68,76,84,95,100];
+const sCld=[null,null,72,90,110,135,142],sNat=[22,32,40,46,52,60,63];
+const skL=["Azure / Cloud","Intune / MDM","M365 Admin","PowerShell","Cybersecurity","VMware","Networking","ServiceNow"];
+const skD=[95,84,89,80,94,70,77,70],skY=[95,90,90,70,82,80,78,85];
+
+/* ── BUILD ALL CHARTS ─────────────────────────────────────────────────── */
+function buildAll(){
+  // GROWTH
+  new Chart(document.getElementById("c-growth"),{type:"line",
+    data:{labels:gY,datasets:[{label:"Tech Jobs (K)",data:gJ,borderColor:G,backgroundColor:G+"40",fill:true,tension:.4,pointRadius:4,pointBackgroundColor:G}]},
+    options:baseOpts({plugins:{legend:{display:false}},scales:{x:{grid:{color:"#1e2638"},ticks:{color:"#94a3c0"}},y:{grid:{color:"#1e2638"},ticks:{color:"#94a3c0",callback:v=>v+"K"}}}})
+  });
+  // REMOTE
+  new Chart(document.getElementById("c-remote"),{type:"line",
+    data:{labels:rY,datasets:[{label:"Remote %",data:rP,borderColor:R,backgroundColor:R+"40",fill:true,tension:.4,pointRadius:4,pointBackgroundColor:R}]},
+    options:baseOpts({plugins:{legend:{display:false}},scales:{x:{grid:{color:"#1e2638"},ticks:{color:"#94a3c0"}},y:{grid:{color:"#1e2638"},ticks:{color:"#94a3c0",callback:v=>v+"%"}}}})
+  });
+  // GENDER
+  new Chart(document.getElementById("c-gender"),{type:"line",
+    data:{labels:genY,datasets:[
+      {label:"Men %",data:genM,borderColor:BL,backgroundColor:BL+"40",fill:true,tension:.4,pointRadius:3},
+      {label:"Women %",data:genW,borderColor:PK,backgroundColor:PK+"40",fill:true,tension:.4,pointRadius:3}
+    ]},
+    options:baseOpts({scales:{x:{grid:{color:"#1e2638"},ticks:{color:"#94a3c0"}},y:{min:0,max:100,grid:{color:"#1e2638"},ticks:{color:"#94a3c0",callback:v=>v+"%"}}}})
+  });
+  // RACE DONUT
+  new Chart(document.getElementById("c-race"),{type:"doughnut",
+    data:{labels:["White","Asian","Hispanic/Latino","Black","Multi/Other"],
+      datasets:[{data:[61,22,8,4,5],backgroundColor:[GD,G,R,BL,"#c084fc"],borderColor:"#0d1117",borderWidth:3}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{color:"#cdd5e8",font:{size:12},padding:10}}}}
+  });
+  // HISPANIC
+  new Chart(document.getElementById("c-hisp"),{type:"line",
+    data:{labels:hY,datasets:[{label:"Hispanic/Latino %",data:hP,borderColor:R,backgroundColor:R+"50",fill:true,tension:.4,pointRadius:4,pointBackgroundColor:R}]},
+    options:baseOpts({plugins:{legend:{display:false}},scales:{x:{grid:{color:"#1e2638"},ticks:{color:"#94a3c0"}},y:{min:0,max:12,grid:{color:"#1e2638"},ticks:{color:"#94a3c0",callback:v=>v+"%"}}}})
+  });
+  // STATES
+  new Chart(document.getElementById("c-states"),{type:"bar",
+    data:{labels:stL,datasets:[{label:"Tech Jobs (K)",data:stV,backgroundColor:stC,borderRadius:5}]},
+    options:{...baseOpts(),indexAxis:"y",plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:"#1e2638"},ticks:{color:"#94a3c0",callback:v=>v+"K"}},y:{grid:{display:false},ticks:{color:"#f0f4ff",font:{size:12}}}}}
+  });
+  // AGE
+  new Chart(document.getElementById("c-age"),{type:"bar",
+    data:{labels:aB,datasets:[
+      {label:"Tech Industry %",data:aT,backgroundColor:G+"e0",borderRadius:5},
+      {label:"All Industries %",data:aA,backgroundColor:GD+"b8",borderRadius:5}
+    ]},
+    options:baseOpts({scales:{x:{grid:{color:"#1e2638"},ticks:{color:"#94a3c0"}},y:{grid:{color:"#1e2638"},ticks:{color:"#94a3c0",callback:v=>v+"%"}}}})
+  });
+  // SALARY
+  new Chart(document.getElementById("c-sal"),{type:"line",
+    data:{labels:sY,datasets:[
+      {label:"IT Support",data:sSup,borderColor:TL,pointBackgroundColor:TL,tension:.4,pointRadius:4},
+      {label:"Sys Admin",data:sSys,borderColor:G,pointBackgroundColor:G,tension:.4,pointRadius:4},
+      {label:"Cloud Engineer",data:sCld,borderColor:GD,pointBackgroundColor:GD,tension:.4,pointRadius:4,spanGaps:true},
+      {label:"National Median",data:sNat,borderColor:MU,pointBackgroundColor:MU,tension:.4,pointRadius:3,borderDash:[6,4]}
+    ]},
+    options:baseOpts({scales:{x:{grid:{color:"#1e2638"},ticks:{color:"#94a3c0"}},y:{grid:{color:"#1e2638"},ticks:{color:"#94a3c0",callback:v=>"$"+v+"K"}}}})
+  });
+  // RADAR
+  new Chart(document.getElementById("c-radar"),{type:"radar",
+    data:{labels:skL,datasets:[
+      {label:"Market Demand",data:skD,borderColor:R,backgroundColor:R+"26",pointBackgroundColor:R,borderWidth:2},
+      {label:"Your Level",data:skY,borderColor:G,backgroundColor:G+"33",pointBackgroundColor:G,borderWidth:2}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#cdd5e8",font:{size:12}}}},
+      scales:{r:{min:0,max:100,grid:{color:"#2d3748"},ticks:{color:"#5c6a84",backdropColor:"transparent",font:{size:10}},pointLabels:{color:"#cdd5e8",font:{size:11,weight:"600"}}}}}
+  });
+  // SKILLS BAR
+  new Chart(document.getElementById("c-skills"),{type:"bar",
+    data:{labels:skL,datasets:[
+      {label:"Market Demand",data:skD,backgroundColor:R+"cc",borderRadius:4},
+      {label:"Your Level",data:skY,backgroundColor:G+"dd",borderRadius:4}
+    ]},
+    options:{...baseOpts(),indexAxis:"y",
+      scales:{x:{min:0,max:100,grid:{color:"#1e2638"},ticks:{color:"#94a3c0"}},y:{grid:{display:false},ticks:{color:"#f0f4ff",font:{size:12}}}}}
+  });
+}
+
+/* ── LIVE FETCH ───────────────────────────────────────────────────────── */
+async function doRefresh(){
+  const btn=document.getElementById("rfBtn");
+  const ld=document.getElementById("ldTxt");
+  const ls=document.getElementById("lvStat");
+  const er=document.getElementById("errTxt");
+  btn.disabled=true;btn.textContent="Loading…";
+  ld.style.display="flex";ls.style.display="none";er.style.display="none";
+
+  const prompt=`Search the web for the most current statistics available as of early 2026. Use BLS, CompTIA, NCWIT, LinkedIn Workforce Reports, Glassdoor, Indeed.
+
+Find and return:
+1. Total US tech sector job count as of early 2026
+2. Percentage of women in US tech workforce 2025-2026
+3. Median US annual salaries (numbers in thousands, integers only) for: IT Support Specialist, Systems Administrator, Cloud/Azure Engineer, national median all workers — 2025-2026
+4. Percentage of US tech jobs that are remote or hybrid in early 2026
+5. Hispanic/Latino percentage of US tech workforce 2025-2026
+6. Top 5 most in-demand IT skills in job postings right now in 2026
+7. Key tech hiring or layoff trends January through March 2026 — write 2 plain clear sentences
+8. Age discrimination trends in tech hiring 2025-2026 — write 2 plain clear sentences
+
+Return ONLY a valid JSON object with no markdown, no code fences, no explanation, no text outside the JSON:
+{"totalTechJobs":"10.3M","womenInTech":"28%","salarySupport":68,"salarySysAdmin":100,"salaryCloud":145,"salaryNational":63,"remotePct":"31%","hispanicPct":"8.6%","topSkills":["Azure","Cloud Security","Python","Kubernetes","Cybersecurity"],"hiringTrend":"Two sentence summary here.","ageTrend":"Two sentence summary here."}`;
+
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1200,
+        tools:[{type:"web_search_20250305",name:"web_search"}],
+        messages:[{role:"user",content:prompt}]})
+    });
+    const data=await res.json();
+    const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+    const m=txt.match(/\{[\s\S]*?\}/);
+    if(!m)throw new Error("no json");
+    const d=JSON.parse(m[0]);
+
+    // update stat cards
+    const sv=(id,v)=>{const c=document.getElementById(id);if(c)c.querySelector(".val").textContent=v;};
+    if(d.totalTechJobs) sv("sc-jobs",d.totalTechJobs);
+    if(d.remotePct)     sv("sc-remote",d.remotePct);
+    if(d.womenInTech)   sv("sc-women",d.womenInTech);
+    if(d.salarySupport) sv("sc-sup","$"+d.salarySupport+"K");
+    if(d.salarySysAdmin)sv("sc-sys","$"+d.salarySysAdmin+"K");
+    if(d.salaryCloud)   sv("sc-cld","$"+d.salaryCloud+"K");
+    if(d.salaryNational)sv("sc-nat","$"+d.salaryNational+"K");
+
+    // live callouts
+    const sc=(bid,tid,txt)=>{
+      const b=document.getElementById(bid),t=document.getElementById(tid);
+      if(b&&t){t.textContent=txt;b.classList.add("show");}
+    };
+    if(d.hiringTrend) sc("lc-hire","lc-hire-t",d.hiringTrend);
+    if(d.ageTrend)    sc("lc-age","lc-age-t",d.ageTrend);
+    if(d.hispanicPct) sc("lc-hisp","lc-hisp-t","Current estimate: "+d.hispanicPct+" of the US tech workforce vs ~19% of the US population. The representation gap is most acute at the senior cloud and infrastructure level — precisely where your career is heading.");
+    if(d.topSkills)   sc("lc-skills","lc-skills-t","Top skills in active job postings right now: "+d.topSkills.join(" · "));
+
+    ld.style.display="none";ls.style.display="flex";
+    document.getElementById("lvTime").textContent="Live · "+new Date().toLocaleTimeString();
+  }catch(e){
+    ld.style.display="none";er.style.display="inline";
+    er.textContent="Live fetch unavailable — showing latest baseline data.";
+  }
+  btn.disabled=false;btn.textContent="⟳ Refresh Live Data";
+}
+
+buildAll();
+doRefresh();
+</script>
+</body>
+</html>
